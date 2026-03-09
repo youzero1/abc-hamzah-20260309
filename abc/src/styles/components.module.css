@@ -1,0 +1,28 @@
+.noteCard {
+  transition: box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.noteCard:hover {
+  transform: translateY(-1px);
+}
+
+.priorityHigh {
+  border-left-color: #f87171;
+}
+
+.priorityMedium {
+  border-left-color: #fbbf24;
+}
+
+.priorityLow {
+  border-left-color: #34d399;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
