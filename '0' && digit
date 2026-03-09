@@ -1,0 +1,138 @@
+'0') return prev;
+      const newDisplay = prev.display === '0' ? digit : prev.display + digit;
+      if (newDisplay.length > 15) return prev;
+      return { ...prev, display: newDisplay };
+    });
+  }, []);
+
+  const handleOperator = useCallback((op: string) => {
+    setState((prev) => {
+      if (prev.operator && !prev.waitingForOperand) {
+        // Chain calculation
+        try {
+          const result = calculate(
+            parseFloat(prev.previousValue),
+            parseFloat(prev.display),
+            prev.operator
+          );
+          const formatted = formatResult(result);
+          return {
+            display: formatted,
+            previousValue: formatted,
+            operator: op,
+            waitingForOperand: true,
+            expression: `${formatted} ${op}`,
+          };
+        } catch {
+          return { ...initialState, display: 'Error' };
+        }
+      }
+      return {
+        ...prev,
+        previousValue: prev.display,
+        operator: op,
+        waitingForOperand: true,
+        expression: `${prev.display} ${op}`,
+      };
+    });
+  }, []);
+
+  const handleEquals = useCallback(() => {
+    setState((prev) => {
+      if (!prev.operator || !prev.previousValue) return prev;
+      try {
+        const result = calculate(
+          parseFloat(prev.previousValue),
+          parseFloat(prev.display),
+          prev.operator
+        );
+        const formatted = formatResult(result);
+        const fullExpression = `${prev.previousValue} ${prev.operator} ${prev.display} =`;
+
+        // Save to history
+        fetch('/api/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            expression: `${prev.previousValue} ${prev.operator} ${prev.display}`,
+            result: formatted,
+          }),
+        })
+          .then(() => onCalculation?.())
+          .catch(console.error);
+
+        return {
+          display: formatted,
+          previousValue: '',
+          operator: '',
+          waitingForOperand: true,
+          expression: fullExpression,
+        };
+      } catch {
+        return { ...initialState, display: 'Error', expression: 'Error' };
+      }
+    });
+  }, [onCalculation]);
+
+  const handleClear = useCallback(() => {
+    setState(initialState);
+  }, []);
+
+  const handleClearEntry = useCallback(() => {
+    setState((prev) => ({ ...prev, display: '0' }));
+  }, []);
+
+  const handlePercent = useCallback(() => {
+    setState((prev) => {
+      const value = parseFloat(prev.display);
+      if (isNaN(value)) return prev;
+      const result = value / 100;
+      return { ...prev, display: formatResult(result) };
+    });
+  }, []);
+
+  const handleNegate = useCallback(() => {
+    setState((prev) => {
+      if (prev.display === '0') return prev;
+      const newDisplay = prev.display.startsWith('-')
+        ? prev.display.slice(1)
+        : '-' + prev.display;
+      return { ...prev, display: newDisplay };
+    });
+  }, []);
+
+  const handleDecimal = useCallback(() => {
+    setState((prev) => {
+      if (prev.waitingForOperand) {
+        return { ...prev, display: '0.', waitingForOperand: false };
+      }
+      if (prev.display.includes('.')) return prev;
+      return { ...prev, display: prev.display + '.' };
+    });
+  }, []);
+
+  const handleBackspace = useCallback(() => {
+    setState((prev) => {
+      if (prev.waitingForOperand) return prev;
+      if (prev.display.length <= 1 || (prev.display.length === 2 && prev.display.startsWith('-'))) {
+        return { ...prev, display: '0' };
+      }
+      return { ...prev, display: prev.display.slice(0, -1) };
+    });
+  }, []);
+
+  // Keyboard support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= '0' && e.key <= '9') {
+        handleDigit(e.key);
+      } else if (e.key === '+') {
+        handleOperator('+');
+      } else if (e.key === '-') {
+        handleOperator('-');
+      } else if (e.key === '*') {
+        handleOperator('×');
+      } else if (e.key === '/') {
+        e.preventDefault();
+        handleOperator('÷');
+      } else if (e.key
